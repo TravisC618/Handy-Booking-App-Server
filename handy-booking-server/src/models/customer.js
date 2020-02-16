@@ -48,6 +48,12 @@ const schema = new mongoose.Schema({
       // tradie model name
       ref: "Tradie"
     }
+  ],
+  tasks: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Task"
+    }
   ]
 });
 

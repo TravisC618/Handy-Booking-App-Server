@@ -2,7 +2,7 @@
  * Handle user login/refresh token
  */
 
-const User = require("../models/users");
+const User = require("../models/user");
 const { formatResponse } = require("../utils/helper");
 const { generateToken } = require("../utils/jwt");
 

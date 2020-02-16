@@ -1,5 +1,7 @@
+const mongoose = require("mongoose");
 const Customer = require("../models/customer");
 const Tradie = require("../models/tradie");
+const Task = require("../models/task");
 const { formatResponse } = require("../utils/helper");
 
 async function addCustomer(req, res) {
@@ -37,6 +39,12 @@ async function getCustomer(req, res) {
   if (!customer) {
     return formatResponse(res, 404, "Customer not found", null);
   }
+
+  const taskArr = [];
+  customer.tasks.forEach(async task => taskArr.push(task));
+  const targetTask = await Task.findById(taskArr[0]); // null ???
+  return res.json(targetTask);
+
   return formatResponse(res, 200, null, customer);
 }
 
@@ -75,7 +83,7 @@ async function updateCustomer(req, res) {
     { new: true }
   );
   if (!newCustomer) {
-    return formatResponse(res, 404, "Customer not full", null);
+    return formatResponse(res, 404, "Customer not found", null);
   }
   return formatResponse(res, 201, null, newCustomer);
 }
@@ -86,15 +94,19 @@ async function deleteCustomer(req, res) {
   // get document
   const deletedCustomer = await Customer.findByIdAndDelete(id);
   if (!deletedCustomer) {
-    return formatResponse(res, 404, "Customer not full", null);
+    return formatResponse(res, 404, "Customer not found", null);
   }
-  // delete ref
+  // delete ref - tradie
   await Tradie.updateMany(
     { _id: { $in: deleteCustomer.tradies } },
     { $pull: { customers: deleteCustomer._id } }
   );
+  // delete all tasks belongs to deletedCustomer
+  deleteCustomer.tasks.forEach(
+    async task => await Task.findByIdAndDelete(task)
+  );
 
-  return formatResponse(res, 200, null, deletedCustomer);
+  return formatResponse(res, 200, "Delete successfully", deletedCustomer);
 }
 
 async function confirmTradie(req, res) {
@@ -107,10 +119,10 @@ async function confirmTradie(req, res) {
 
   // check existed
   if (!customer) {
-    return formatResponse(res, 404, "Customer not full", null);
+    return formatResponse(res, 404, "Customer not found", null);
   }
   if (!tradie) {
-    return formatResponse(res, 404, "Tradie not full", null);
+    return formatResponse(res, 404, "Tradie not found", null);
   }
 
   // add tradie to customer
@@ -150,10 +162,10 @@ async function deleteTradie(req, res) {
 
   // check existed
   if (!customer) {
-    return formatResponse(res, 404, "Customer not full", null);
+    return formatResponse(res, 404, "Customer not found", null);
   }
   if (!tradie) {
-    return formatResponse(res, 404, "Tradie not full", null);
+    return formatResponse(res, 404, "Tradie not found", null);
   }
 
   // delete tradie
