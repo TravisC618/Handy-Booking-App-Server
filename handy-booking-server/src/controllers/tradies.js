@@ -31,6 +31,7 @@ async function addTradie(req, res) {
     vocation,
     reviews
   });
+  // return res.json({ name, gender, email }); // 读不出body？？
   await tradie.save();
   return formatResponse(res, 201, null, tradie);
 }

@@ -39,12 +39,6 @@ async function getCustomer(req, res) {
   if (!customer) {
     return formatResponse(res, 404, "Customer not found", null);
   }
-
-  const taskArr = [];
-  customer.tasks.forEach(async task => taskArr.push(task));
-  const targetTask = await Task.findById(taskArr[0]); // null ???
-  return res.json(targetTask);
-
   return formatResponse(res, 200, null, customer);
 }
 
@@ -92,29 +86,36 @@ async function deleteCustomer(req, res) {
   // get id
   const { id } = req.params;
   // get document
-  const deletedCustomer = await Customer.findByIdAndDelete(id);
+  const deletedCustomer = await Customer.findById(id);
   if (!deletedCustomer) {
     return formatResponse(res, 404, "Customer not found", null);
   }
   // delete ref - tradie
   await Tradie.updateMany(
-    { _id: { $in: deleteCustomer.tradies } },
-    { $pull: { customers: deleteCustomer._id } }
+    { _id: { $in: deletedCustomer.tradies } },
+    { $pull: { customers: deletedCustomer._id } }
   );
   // delete all tasks belongs to deletedCustomer
-  deleteCustomer.tasks.forEach(
+  deletedCustomer.tasks.forEach(
     async task => await Task.findByIdAndDelete(task)
   );
+
+  // delete target customer
+  await Customer.findByIdAndDelete(id);
 
   return formatResponse(res, 200, "Delete successfully", deletedCustomer);
 }
 
-async function confirmTradie(req, res) {
+/**
+ * assign tradie to an existing task
+ */
+async function assignTradie(req, res) {
   // get id
-  const { id, tradieId } = req.params;
+  const { id: customerId, taskId, tradieId } = req.params;
 
   // get document
-  const customer = await Customer.findById(id);
+  const customer = await Customer.findById(customerId);
+  const task = await Task.findById(taskId);
   const tradie = await Tradie.findById(tradieId);
 
   // check existed
@@ -124,32 +125,41 @@ async function confirmTradie(req, res) {
   if (!tradie) {
     return formatResponse(res, 404, "Tradie not found", null);
   }
+  if (!task) {
+    return formatResponse(res, 404, "Task not found", null);
+  }
 
-  // add tradie to customer
+  if (task.tradie) {
+    return formatResponse(res, 400, "Tradie is already assigned.", null);
+  }
+
   const tradiesArrOldLength = customer.tradies.length;
   const customersArrOldLength = tradie.customers.length;
-
+  const tasksArrOldLength = tradie.tasks.length;
+  // add tradie to task
+  task.tradie = tradie._id;
+  // add tradie to customer - no redundancy
   customer.tradies.addToSet(tradie._id);
+  // add customer to tradie - no redundancy
   tradie.customers.addToSet(customer._id);
+  // add task to tradie - no redundancy
+  tradie.tasks.addToSet(task._id);
 
-  // check array length
-  //    - tradie may already confirmed
+  // adding validity
   if (
     tradiesArrOldLength === customer.tradies.length ||
-    customersArrOldLength === tradie.customers.length
+    customersArrOldLength === tradie.customers.length ||
+    task.tradie !== tradie._id ||
+    tradie.tasks.length === tasksArrOldLength
   ) {
-    return formatResponse(
-      res,
-      400,
-      "Confirm unsuccessfully, please try again.",
-      null
-    );
+    return formatResponse(res, 400, "Assign failed, please try again.", null);
   }
 
   // return success
   await customer.save();
   await tradie.save();
-  return formatResponse(res, 201, "Confirm Successfully!", customer);
+  await task.save();
+  return formatResponse(res, 201, "Assign successfully!", customer);
 }
 
 async function deleteTradie(req, res) {
@@ -199,6 +209,6 @@ module.exports = {
   getCustomer,
   updateCustomer,
   deleteCustomer,
-  confirmTradie,
+  assignTradie,
   deleteTradie
 };

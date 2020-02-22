@@ -2,6 +2,9 @@
 node_modules/
 logs/
 
+# test example
+testExample/
+
 # misc
 .env
 # Elastic Beanstalk Files
