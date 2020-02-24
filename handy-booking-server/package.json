@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "pm2-runtime start config/ecosystem.config.js --env production",
     "dev": "nodemon src/index.js",
     "debug": "nodemon --inspect src/index.js",
     "test": "jest",
