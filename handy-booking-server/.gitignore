@@ -5,6 +5,8 @@ logs/
 # test example
 testExample/
 
+handy-booking-server.zip
+
 # misc
 .env
 # Elastic Beanstalk Files

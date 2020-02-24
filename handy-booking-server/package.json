@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "pm2-runtime start config/ecosystem.config.js --env production",
+    "stop": "pm2 stop config/ecosystem.config.js",
     "dev": "nodemon src/index.js",
     "debug": "nodemon --inspect src/index.js",
     "test": "jest",
